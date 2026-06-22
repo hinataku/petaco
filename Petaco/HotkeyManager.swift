@@ -1,13 +1,6 @@
 import Foundation
 import Carbon.HIToolbox
 import AppKit
-import OSLog
-
-enum PetacoLog {
-    static let hotkey = Logger(subsystem: "com.example.petaco", category: "hotkey")
-    static let paste = Logger(subsystem: "com.example.petaco", category: "paste")
-    static let focus = Logger(subsystem: "com.example.petaco", category: "focus")
-}
 
 // 全定型文に対応するグローバルホットキーを登録し、押されたらペーストを実行する
 final class HotkeyManager {

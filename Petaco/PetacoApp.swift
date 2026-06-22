@@ -1,4 +1,11 @@
 import SwiftUI
+import OSLog
+
+enum PetacoLog {
+    static let hotkey = Logger(subsystem: "com.example.petaco", category: "hotkey")
+    static let paste = Logger(subsystem: "com.example.petaco", category: "paste")
+    static let focus = Logger(subsystem: "com.example.petaco", category: "focus")
+}
 
 @main
 struct PetacoApp: App {

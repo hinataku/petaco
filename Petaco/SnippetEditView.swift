@@ -74,14 +74,21 @@ struct SnippetEditView: View {
             }
 
             if isShowingKeyCaptureDialog {
-                SnippetShortcutCaptureDialog(
-                    keyCode: $snippet.keyCode,
-                    modifiers: $snippet.modifiers,
-                    onDismiss: {
-                        onKeyCaptureChanged(false)
-                        isShowingKeyCaptureDialog = false
-                    }
-                )
+                ZStack {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    SnippetShortcutCaptureDialog(
+                        keyCode: $snippet.keyCode,
+                        modifiers: $snippet.modifiers,
+                        onDismiss: {
+                            onKeyCaptureChanged(false)
+                            isShowingKeyCaptureDialog = false
+                        }
+                    )
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(radius: 20)
+                }
             }
         }
         .padding(20)
@@ -92,19 +99,19 @@ struct SnippetEditView: View {
     }
 
     private var currentShortcutDisplay: String {
-        let mods = Modifiers(rawValue: snippet.modifiers)
-        return mods.displaySymbols + KeyCodeMap.char(for: snippet.keyCode)
+        Modifiers(rawValue: snippet.modifiers).shortcutLabel(keyCode: snippet.keyCode)
     }
 }
 
-private struct SnippetShortcutCaptureDialog: View {
+// SnippetEditViewとContentView（一覧からのショートカット直接編集）で共用するキャプチャダイアログ
+struct SnippetShortcutCaptureDialog: View {
     @Binding var keyCode: UInt32
     @Binding var modifiers: UInt32
     let onDismiss: () -> Void
 
     @State private var draftKeyCode: UInt32
     @State private var draftModifiers: UInt32
-    @State private var isCapturing = true
+    @State private var isCapturing = false
 
     init(keyCode: Binding<UInt32>, modifiers: Binding<UInt32>, onDismiss: @escaping () -> Void) {
         _keyCode = keyCode
@@ -115,47 +122,40 @@ private struct SnippetShortcutCaptureDialog: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-            VStack(spacing: 18) {
-                Text("ショートカットキーを変更")
-                    .font(.headline)
-                Text(isCapturing ? "ショートカットキーを押してください" : "入力されたショートカット")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(shortcutLabel)
-                    .font(.system(size: 28, weight: .medium, design: .monospaced))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Color.gray.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                KeyCaptureView(keyCode: $draftKeyCode, modifiers: $draftModifiers, isCapturing: $isCapturing)
-                    .frame(width: 1, height: 1)
-                HStack {
-                    Button("キャンセル", action: onDismiss)
-                    Spacer()
-                    Button("入力し直す") {
-                        isCapturing = false
-                        DispatchQueue.main.async { isCapturing = true }
-                    }
-                    Button("保存") {
-                        keyCode = draftKeyCode
-                        modifiers = draftModifiers
-                        onDismiss()
-                    }
-                    .keyboardShortcut(.defaultAction)
+        VStack(spacing: 18) {
+            Text("ショートカットキーを変更")
+                .font(.headline)
+            Text(isCapturing ? "ショートカットキーを押してください" : "現在のショートカット")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text(shortcutLabel)
+                .font(.system(size: 28, weight: .medium, design: .monospaced))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(Color.gray.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            KeyCaptureView(keyCode: $draftKeyCode, modifiers: $draftModifiers, isCapturing: $isCapturing)
+                .frame(width: 1, height: 1)
+            HStack {
+                Button("キャンセル", action: onDismiss)
+                Spacer()
+                Button("入力し直す") {
+                    isCapturing = false
+                    DispatchQueue.main.async { isCapturing = true }
                 }
+                Button("保存") {
+                    keyCode = draftKeyCode
+                    modifiers = draftModifiers
+                    onDismiss()
+                }
+                .keyboardShortcut(.defaultAction)
             }
-            .padding(24)
-            .frame(width: 370)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .shadow(radius: 20)
         }
+        .padding(24)
+        .frame(width: 370)
     }
 
     private var shortcutLabel: String {
-        Modifiers(rawValue: draftModifiers).displaySymbols + KeyCodeMap.char(for: draftKeyCode)
+        Modifiers(rawValue: draftModifiers).shortcutLabel(keyCode: draftKeyCode)
     }
 }

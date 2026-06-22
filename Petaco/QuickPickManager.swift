@@ -5,7 +5,7 @@ import SwiftUI
 import Carbon.HIToolbox
 import CoreGraphics
 
-// 設定したショートカット（初期値: ⌘⇧Space）で一覧オーバーレイを開閉する。
+// 設定したショートカット（複数可）で一覧オーバーレイを開閉する。
 final class QuickPickManager: ObservableObject {
     // オーバーレイに表示するコピー履歴の選択肢
     struct Entry: Identifiable, Equatable {
@@ -26,7 +26,7 @@ final class QuickPickManager: ObservableObject {
     private var shortcutSubscription: AnyCancellable?
     private var shortcutEditingSubscription: AnyCancellable?
     private let triggerHotKeySignature = OSType(0x51505452) // "QPTR"
-    private var triggerHotKeyRef: EventHotKeyRef?
+    private var triggerHotKeyRefs: [EventHotKeyRef] = []
     private var triggerEventHandler: EventHandlerRef?
     private var overlayPanel: NSPanel?
 
@@ -47,13 +47,12 @@ final class QuickPickManager: ObservableObject {
             guard let self, self.isShowingOverlay else { return }
             self.refreshEntries(resetSelection: true)
         }
-        self.shortcutSubscription = shortcutStore.$keyCode
-            .combineLatest(shortcutStore.$modifiers)
+        self.shortcutSubscription = shortcutStore.$shortcuts
             .dropFirst()
-            .sink { [weak self] _, _ in
+            .sink { [weak self] _ in
                 DispatchQueue.main.async {
-                    guard let self, !self.isShowingOverlay else { return }
-                    self.registerTriggerHotKey()
+                    guard let self, !self.isShowingOverlay, !self.shortcutStore.isEditing else { return }
+                    self.registerTriggerHotKeys()
                 }
             }
         self.shortcutEditingSubscription = shortcutStore.$isEditing
@@ -62,9 +61,9 @@ final class QuickPickManager: ObservableObject {
                 DispatchQueue.main.async {
                     guard let self else { return }
                     if isEditing {
-                        self.unregisterTriggerHotKey()
+                        self.unregisterTriggerHotKeys()
                     } else if !self.isShowingOverlay {
-                        self.registerTriggerHotKey()
+                        self.registerTriggerHotKeys()
                     }
                 }
             }
@@ -86,43 +85,39 @@ final class QuickPickManager: ObservableObject {
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &triggerEventHandler)
 
-        registerTriggerHotKey()
+        registerTriggerHotKeys()
     }
 
-    private func registerTriggerHotKey() {
+    private func registerTriggerHotKeys() {
         guard !shortcutStore.isEditing else { return }
-        if let triggerHotKeyRef {
-            UnregisterEventHotKey(triggerHotKeyRef)
-            self.triggerHotKeyRef = nil
-        }
-
-        var ref: EventHotKeyRef?
-        let hotKeyID = EventHotKeyID(signature: triggerHotKeySignature, id: 1)
-        let modifiers = Modifiers(rawValue: shortcutStore.modifiers).carbonHotKeyModifiers
-        let status = RegisterEventHotKey(shortcutStore.keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref)
-        if status == noErr {
-            triggerHotKeyRef = ref
-            PetacoLog.hotkey.notice("Registered quick pick trigger keyCode=\(self.shortcutStore.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public)")
-        } else {
-            PetacoLog.hotkey.error("Failed to register quick pick trigger status=\(status, privacy: .public)")
+        unregisterTriggerHotKeys()
+        for (index, shortcut) in shortcutStore.shortcuts.enumerated() {
+            var ref: EventHotKeyRef?
+            let hotKeyID = EventHotKeyID(signature: triggerHotKeySignature, id: UInt32(index + 1))
+            let modifiers = Modifiers(rawValue: shortcut.modifiers).carbonHotKeyModifiers
+            let status = RegisterEventHotKey(shortcut.keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                triggerHotKeyRefs.append(ref)
+                PetacoLog.hotkey.notice("Registered quick pick trigger keyCode=\(shortcut.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public)")
+            } else {
+                PetacoLog.hotkey.error("Failed to register quick pick trigger status=\(status, privacy: .public)")
+            }
         }
     }
 
-    private func unregisterTriggerHotKey() {
-        if let triggerHotKeyRef {
-            UnregisterEventHotKey(triggerHotKeyRef)
-            self.triggerHotKeyRef = nil
+    private func unregisterTriggerHotKeys() {
+        for ref in triggerHotKeyRefs {
+            UnregisterEventHotKey(ref)
         }
+        triggerHotKeyRefs.removeAll()
     }
 
     private func handlePossibleTrigger() {
         PetacoLog.hotkey.notice("Received quick pick trigger, overlayVisible=\(self.isShowingOverlay, privacy: .public)")
-        // 既に表示中なら閉じる（トグルとして使えるようにする）
         if isShowingOverlay {
             cancelOverlay()
             return
         }
-
         showOverlay()
         if startsSessionMonitoring {
             startSessionMonitoring()
@@ -197,7 +192,6 @@ final class QuickPickManager: ObservableObject {
     private var mouseMonitor: Any?
 
     private func startSessionMonitoring() {
-        // 既に動いていれば一旦解除してから張り直す（多重登録防止）
         stopSessionMonitoring()
 
         installSessionHotKeyHandlerIfNeeded()
@@ -206,9 +200,6 @@ final class QuickPickManager: ObservableObject {
         registerSessionHotKey(.confirm, keyCode: UInt32(kVK_Return))
         registerSessionHotKey(.cancel, keyCode: UInt32(kVK_Escape))
 
-
-        // その他キーは観測して一覧だけを閉じる。イベントは返さないため、
-        // 元アプリ側では通常どおり入力される。
         sessionCancelMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self, self.isShowingOverlay, !event.isARepeat else { return }
             let handledKeyCodes: Set<UInt16> = [
@@ -218,7 +209,6 @@ final class QuickPickManager: ObservableObject {
             DispatchQueue.main.async { self.cancelOverlay() }
         }
         if usesOutsideClickMonitor {
-            // オーバーレイ外のクリックで閉じる
             mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 guard let self, let panel = self.overlayPanel else { return }
                 let screenPoint = NSEvent.mouseLocation
@@ -328,10 +318,7 @@ final class QuickPickManager: ObservableObject {
             return
         }
         let content = entries[selectedIndex].content
-        // 先にイベントタップを解除する。貼り付け準備より後にすると、直後の次キーを
-        // オーバーレイが吸収してキーリピート開始まで入力が止まることがある。
         closeOverlay()
-        // 表示前に操作していたアプリを貼り付け先として固定し、Cmd+V まで実行する。
         PasteManager.paste(text: content, targetApplication: pasteTargetApplication) { pastedText in
             DispatchQueue.main.async {
                 self.historyStore.record(content: pastedText)

@@ -21,14 +21,19 @@ struct Modifiers: OptionSet, Codable {
     static let option  = Modifiers(rawValue: 1 << 2)
     static let control = Modifiers(rawValue: 1 << 3)
 
-    // 表示用の文字列 (例: "⌘⇧1")
-    var displaySymbols: String {
-        var s = ""
-        if contains(.control) { s += "⌃" }
-        if contains(.option) { s += "⌥" }
-        if contains(.shift) { s += "⇧" }
-        if contains(.command) { s += "⌘" }
-        return s
+    // 修飾キーの記号リスト (例: ["⌃", "⌘"])
+    var displaySymbols: [String] {
+        var parts: [String] = []
+        if contains(.control) { parts.append("⌃") }
+        if contains(.option) { parts.append("⌥") }
+        if contains(.shift) { parts.append("⇧") }
+        if contains(.command) { parts.append("⌘") }
+        return parts
+    }
+
+    // キーコードと組み合わせたショートカット表示文字列 (例: "⌃ + ⌘ + F1")
+    func shortcutLabel(keyCode: UInt32) -> String {
+        (displaySymbols + [KeyCodeMap.char(for: keyCode)]).joined(separator: " + ")
     }
 
     // CarbonのグローバルホットキーAPIへ渡す修飾キーフラグへ変換する。

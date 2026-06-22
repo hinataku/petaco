@@ -31,21 +31,26 @@ final class SnippetStore: ObservableObject {
             return
         }
         if let decoded = try? JSONDecoder().decode([Snippet].self, from: data) {
-            let oldToNewDefaultKeys = Dictionary(uniqueKeysWithValues: zip(
-                KeyCodeMap.legacyNumberKeyCodes,
-                KeyCodeMap.defaultFunctionKeyCodes
-            ))
-            let updated = decoded.map { snippet -> Snippet in
-                guard snippet.modifiers == Snippet.defaultModifiers,
-                      let newKeyCode = oldToNewDefaultKeys[snippet.keyCode] else { return snippet }
-                var migrated = snippet
-                migrated.keyCode = newKeyCode
-                return migrated
-            }
-            snippets = updated
-            if updated != decoded {
+            let migrated = migrateNumberKeysToFunctionKeys(decoded)
+            snippets = migrated
+            if migrated != decoded {
                 save()
             }
+        }
+    }
+
+    // v1では数字キー(1-0)をデフォルト割り当てにしていたが、アプリとの衝突が多いためFキーへ移行した
+    private func migrateNumberKeysToFunctionKeys(_ snippets: [Snippet]) -> [Snippet] {
+        let oldToNew = Dictionary(uniqueKeysWithValues: zip(
+            KeyCodeMap.legacyNumberKeyCodes,
+            KeyCodeMap.defaultFunctionKeyCodes
+        ))
+        return snippets.map { snippet in
+            guard snippet.modifiers == Snippet.defaultModifiers,
+                  let newKeyCode = oldToNew[snippet.keyCode] else { return snippet }
+            var migrated = snippet
+            migrated.keyCode = newKeyCode
+            return migrated
         }
     }
 

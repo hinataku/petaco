@@ -9,7 +9,11 @@ struct ContentView: View {
 
     @State private var editingSnippet: Snippet?
     @State private var isAddingNew = false
-    @State private var isEditingQuickPickShortcut = false
+    @State private var editingSnippetShortcut: Snippet?
+    @State private var draftShortcutKeyCode: UInt32 = 0
+    @State private var draftShortcutModifiers: UInt32 = 0
+    @State private var isAddingQuickPickShortcut = false
+    @State private var editingQuickPickShortcut: QuickPickShortcut?
     @State private var duplicateWarning: String?
 
     // 長押しでプレビューを出す対象のID（nilなら非表示）
@@ -36,8 +40,10 @@ struct ContentView: View {
                 editorOverlay(snippet: newSnippetTemplate(), isNew: true) {
                     isAddingNew = false
                 }
-            } else if isEditingQuickPickShortcut {
-                shortcutEditorOverlay
+            } else if editingSnippetShortcut != nil {
+                snippetShortcutOverlay
+            } else if isAddingQuickPickShortcut || editingQuickPickShortcut != nil {
+                quickPickShortcutOverlay
             }
         }
         .onAppear {
@@ -78,19 +84,27 @@ struct ContentView: View {
 
             List {
                 ForEach(store.snippets) { snippet in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(snippet.content)
-                                .font(.body)
-                                .lineLimit(1)
+                    HStack(spacing: 8) {
+                        Button {
+                            editingSnippetShortcut = snippet
+                            draftShortcutKeyCode = snippet.keyCode
+                            draftShortcutModifiers = snippet.modifiers
+                            hotkeyManager.suspendAllHotkeys()
+                        } label: {
+                            Text(shortcutLabel(for: snippet))
+                                .font(.system(.caption, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.15))
+                                .cornerRadius(6)
                         }
+                        .buttonStyle(.plain)
+
+                        Text(snippet.content)
+                            .font(.body)
+                            .lineLimit(1)
+
                         Spacer()
-                        Text(shortcutLabel(for: snippet))
-                            .font(.system(.caption, design: .monospaced))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.15))
-                            .cornerRadius(6)
 
                         PasteButton(id: snippet.id, content: snippet.content,
                                     onPaste: pasteFromWindow,
@@ -102,6 +116,7 @@ struct ContentView: View {
                             Image(systemName: "pencil")
                         }
                         .buttonStyle(.borderless)
+
                         Button {
                             store.delete(snippet)
                             hotkeyManager.reloadAllHotkeys()
@@ -119,22 +134,45 @@ struct ContentView: View {
     // MARK: - 右側: 貼り付け履歴
     private var historySection: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text("履歴ショートカット")
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("履歴ショートカット")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button {
+                        quickPickShortcutStore.isEditing = true
+                        isAddingQuickPickShortcut = true
+                    } label: {
+                        Label("追加", systemImage: "plus")
+                    }
                     .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(quickPickShortcutLabel)
-                    .font(.system(.caption, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(6)
-                Button("変更") {
-                    quickPickShortcutStore.isEditing = true
-                    isEditingQuickPickShortcut = true
                 }
-                .font(.caption)
-                Spacer()
+
+                ForEach(quickPickShortcutStore.shortcuts) { shortcut in
+                    HStack(spacing: 6) {
+                        Button {
+                            editingQuickPickShortcut = shortcut
+                            quickPickShortcutStore.isEditing = true
+                        } label: {
+                            Text(Modifiers(rawValue: shortcut.modifiers).shortcutLabel(keyCode: shortcut.keyCode))
+                                .font(.system(.caption, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.15))
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                        Button {
+                            quickPickShortcutStore.delete(shortcut)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top)
@@ -193,13 +231,7 @@ struct ContentView: View {
     }
 
     private func shortcutLabel(for snippet: Snippet) -> String {
-        let mods = Modifiers(rawValue: snippet.modifiers)
-        return mods.displaySymbols + KeyCodeMap.char(for: snippet.keyCode)
-    }
-
-    private var quickPickShortcutLabel: String {
-        let modifiers = Modifiers(rawValue: quickPickShortcutStore.modifiers)
-        return modifiers.displaySymbols + KeyCodeMap.char(for: quickPickShortcutStore.keyCode)
+        Modifiers(rawValue: snippet.modifiers).shortcutLabel(keyCode: snippet.keyCode)
     }
 
     private func newSnippetTemplate() -> Snippet {
@@ -250,15 +282,22 @@ struct ContentView: View {
         }
     }
 
-    private var shortcutEditorOverlay: some View {
+    private var snippetShortcutOverlay: some View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-            QuickPickShortcutEditView(
-                store: quickPickShortcutStore,
+            SnippetShortcutCaptureDialog(
+                keyCode: $draftShortcutKeyCode,
+                modifiers: $draftShortcutModifiers,
                 onDismiss: {
-                    quickPickShortcutStore.isEditing = false
-                    isEditingQuickPickShortcut = false
+                    if var s = editingSnippetShortcut {
+                        s.keyCode = draftShortcutKeyCode
+                        s.modifiers = draftShortcutModifiers
+                        store.update(s)
+                        checkDuplicates()
+                    }
+                    editingSnippetShortcut = nil
+                    hotkeyManager.reloadAllHotkeys()
                 }
             )
             .background(.regularMaterial)
@@ -266,118 +305,23 @@ struct ContentView: View {
             .shadow(radius: 20)
         }
     }
-}
 
-private struct QuickPickShortcutEditView: View {
-    @ObservedObject var store: QuickPickShortcutStore
-    let onDismiss: () -> Void
-
-    @State private var keyCode: UInt32
-    @State private var modifiers: UInt32
-    @State private var isCapturing = true
-
-    init(store: QuickPickShortcutStore, onDismiss: @escaping () -> Void) {
-        self.store = store
-        self.onDismiss = onDismiss
-        _keyCode = State(initialValue: store.keyCode)
-        _modifiers = State(initialValue: store.modifiers)
-    }
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("履歴ショートカットを変更")
-                .font(.headline)
-
-            Text(isCapturing ? "ショートカットキーを押してください" : "入力されたショートカット")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Text(shortcutLabel)
-                .font(.system(size: 28, weight: .medium, design: .monospaced))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background(Color.gray.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            KeyCaptureView(
-                keyCode: $keyCode,
-                modifiers: $modifiers,
-                isCapturing: $isCapturing
-            )
-            .frame(width: 1, height: 1)
-
-            HStack {
-                Button("キャンセル", action: onDismiss)
-                Spacer()
-                Button("入力し直す") {
-                    isCapturing = false
-                    DispatchQueue.main.async {
-                        isCapturing = true
-                    }
-                }
-                Button("保存") {
-                    store.keyCode = keyCode
-                    store.modifiers = modifiers
-                    onDismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(24)
-        .frame(width: 420)
-        .onDisappear {
-            store.isEditing = false
-        }
-    }
-
-    private var shortcutLabel: String {
-        Modifiers(rawValue: modifiers).displaySymbols + KeyCodeMap.char(for: keyCode)
-    }
-}
-
-// 通常クリックで即時貼り付け、長押しでプレビュー表示する貼り付けボタン
-private struct PasteButton: View {
-    let id: UUID
-    let content: String
-    let onPaste: (String) -> Void
-    @Binding var previewingID: UUID?
-
-    // 長押しが発火したら、続くクリックを無視するためのフラグ
-    @State private var didLongPress = false
-
-    var body: some View {
-        Button {
-            if didLongPress {
-                // 長押し直後に発生する余分なクリックは無視する
-                didLongPress = false
-                return
-            }
-            onPaste(content)
-        } label: {
-            Image(systemName: "doc.on.clipboard")
-        }
-        .buttonStyle(.borderless)
-        .help("クリックで貼り付け／長押しでプレビュー")
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-                didLongPress = true
-                previewingID = id
-            }
-        )
-        .popover(isPresented: Binding(
-            get: { previewingID == id },
-            set: { isPresented in if !isPresented { previewingID = nil } }
-        )) {
-            PastePreviewView(
-                content: content,
-                onConfirm: {
-                    previewingID = nil
-                    onPaste(content)
-                },
-                onCancel: {
-                    previewingID = nil
+    private var quickPickShortcutOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+            QuickPickShortcutEditView(
+                store: quickPickShortcutStore,
+                editingShortcut: editingQuickPickShortcut,
+                onDismiss: {
+                    quickPickShortcutStore.isEditing = false
+                    isAddingQuickPickShortcut = false
+                    editingQuickPickShortcut = nil
                 }
             )
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(radius: 20)
         }
     }
 }
