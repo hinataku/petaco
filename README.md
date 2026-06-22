@@ -5,8 +5,11 @@
 
 <video src="https://github.com/user-attachments/assets/d9f283d9-4c89-463b-961e-9cefcf674095" width="220" controls muted loop playsinline></video>
 
-1.0.0
-https://github.com/hinataku/petaco/blob/master/Petaco-1.0.0.zip
+## インストール
+
+1. [Petaco-1.0.0.zip](https://github.com/hinataku/petaco/blob/master/Petaco-1.0.0.zip) をダウンロード
+2. zip を展開して `Petaco.app` を `/Applications` へ移動
+3. 初回起動時に「開発元を確認できません」と表示される場合は、**システム設定 > プライバシーとセキュリティ** を開き「このまま開く」をクリック
 
 ## 機能
 
