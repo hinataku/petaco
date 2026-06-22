@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var editingQuickPickShortcut: QuickPickShortcut?
     @State private var duplicateWarning: String?
     @State private var isConfirmingClearAll = false
+    @State private var revealedSnippetIDs: Set<UUID> = []
 
     // 長押しでプレビューを出す対象のID（nilなら非表示）
     @State private var previewingID: UUID?
@@ -117,18 +118,42 @@ struct ContentView: View {
                         Button {
                             editingSnippet = snippet
                         } label: {
-                            Text(snippet.content)
-                                .font(.body)
-                                .lineLimit(1)
-                                .foregroundColor(.primary)
+                            if snippet.isHidden && !revealedSnippetIDs.contains(snippet.id) {
+                                let preview = String(snippet.content.prefix(4))
+                                let dots = String(repeating: "•", count: min(max(snippet.content.count - 4, 0), 16))
+                                Text(preview + dots)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text(snippet.content)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                    .foregroundColor(.primary)
+                            }
                         }
                         .buttonStyle(.plain)
 
                         Spacer()
 
-                        PasteButton(id: snippet.id, content: snippet.content,
-                                    onPaste: pasteFromWindow,
-                                    previewingID: $previewingID)
+                        Button {
+                            if snippet.isHidden {
+                                if revealedSnippetIDs.contains(snippet.id) {
+                                    revealedSnippetIDs.remove(snippet.id)
+                                } else {
+                                    revealedSnippetIDs.insert(snippet.id)
+                                }
+                            } else {
+                                var updated = snippet
+                                updated.isHidden = true
+                                store.update(updated)
+                            }
+                        } label: {
+                            Image(systemName: snippet.isHidden
+                                  ? (revealedSnippetIDs.contains(snippet.id) ? "eye" : "eye.slash")
+                                  : "eye")
+                        }
+                        .buttonStyle(.borderless)
 
                         Button {
                             store.delete(snippet)
@@ -141,6 +166,7 @@ struct ContentView: View {
                     .padding(.vertical, 4)
                 }
             }
+            .listStyle(.plain)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
             .padding(.horizontal)
@@ -213,35 +239,30 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
                 Spacer()
             } else {
-                ScrollViewReader { proxy in
-                    List {
-                        ForEach(historyStore.items) { item in
-                            HStack {
-                                Text(item.content)
-                                    .font(.body)
-                                    .lineLimit(2)
-                                Spacer()
+                List {
+                    ForEach(historyStore.items) { item in
+                        HStack {
+                            Text(item.content)
+                                .font(.body)
+                                .lineLimit(2)
+                            Spacer()
 
-                                PasteButton(id: item.id, content: item.content,
-                                            onPaste: pasteFromWindow,
-                                            previewingID: $previewingID)
+                            PasteButton(id: item.id, content: item.content,
+                                        onPaste: pasteFromWindow,
+                                        previewingID: $previewingID)
 
-                                Button {
-                                    historyStore.delete(item)
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                                .buttonStyle(.borderless)
+                            Button {
+                                historyStore.delete(item)
+                            } label: {
+                                Image(systemName: "xmark")
                             }
-                            .padding(.vertical, 2)
+                            .buttonStyle(.borderless)
                         }
-                    }
-                    .onChange(of: historyStore.items.first?.id) { firstID in
-                        if let firstID {
-                            proxy.scrollTo(firstID, anchor: .top)
-                        }
+                        .padding(.vertical, 2)
                     }
                 }
+                .id(historyStore.items.first?.id)
+                .listStyle(.plain)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
                 .padding(.horizontal)

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UserNotifications
 
-final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -21,6 +21,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
         self.statusItem = item
 
+        // ウィンドウが用意された後にデリゲートをセットする
+        DispatchQueue.main.async {
+            self.attachWindowDelegate()
+        }
+    }
+
+    private func attachWindowDelegate() {
+        guard let window = NSApp.windows.first(where: { !($0 is NSPanel) }) else { return }
+        window.delegate = self
     }
 
     @objc private func handleClick(_ sender: NSStatusBarButton) {
@@ -34,13 +43,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private func showMenu() {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "ペタコを開く", action: #selector(showMainWindow), keyEquivalent: ""))
+        let openItem = NSMenuItem(title: "ペタコを開く", action: #selector(showMainWindow), keyEquivalent: "")
+        openItem.target = self
+        menu.addItem(openItem)
         menu.addItem(NSMenuItem.separator())
         let quitItem = NSMenuItem(title: "終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quitItem.target = NSApp
         menu.addItem(quitItem)
-        menu.items.first?.target = self
-
         if let button = statusItem?.button {
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
         }
@@ -52,14 +61,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    // 赤い閉じるボタンでアプリを終了せず非表示にする
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
+    }
+
     // アプリがアクティブな状態でも通知バナーを表示する
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner])
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // 赤い閉じるボタンでウィンドウだけが消えてアプリが残ると、
-        // 権限変更後の再起動ができず分かりにくいため、アプリも終了する。
-        return true
+        return false
     }
 }

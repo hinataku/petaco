@@ -7,6 +7,7 @@ struct Snippet: Identifiable, Codable, Equatable {
     var content: String      // 実際に貼り付けられるテキスト
     var keyCode: UInt32      // ショートカットキーのキーコード (例: "1"のキーコード)
     var modifiers: UInt32    // 修飾キー (Cmdなど) のフラグ
+    var isHidden: Bool = false  // trueのとき一覧で内容を●●●表示にする
 
     // デフォルトは Cmd + Shift（Cmd + 数字のアプリ標準ショートカットとの衝突を避ける）
     static let defaultModifiers: UInt32 = Modifiers.command.rawValue | Modifiers.shift.rawValue

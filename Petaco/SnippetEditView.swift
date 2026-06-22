@@ -34,6 +34,11 @@ struct SnippetEditView: View {
                 }
                 .padding(.top, 4)
 
+                if !isNew {
+                    Toggle("一覧で内容を隠す", isOn: $snippet.isHidden)
+                        .toggleStyle(.checkbox)
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ショートカットキー")
                         .font(.caption)
@@ -92,7 +97,7 @@ struct SnippetEditView: View {
             }
         }
         .padding(20)
-        .frame(width: 420, height: 320)
+        .frame(width: 420, height: 360)
         .onDisappear {
             onKeyCaptureChanged(false)
         }

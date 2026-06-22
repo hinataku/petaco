@@ -84,14 +84,17 @@ enum PasteManager {
         }
         let restoreApp = applicationToRestore
         let targetApp = targetApplication
-        let app = targetApp ?? restoreApp
-        let clipboardOnly = Self.needsCtrlV(app)
+        // ホットキー経由は restorePreviousApplication=false なので applicationToRestore が nil になる。
+        // lastExternalApplication を fallback として使い、Windows App 等の検出を確実にする。
+        let detectionApp = targetApp ?? restoreApp ?? lastExternalApplication
+        let clipboardOnly = Self.needsCtrlV(detectionApp)
+
+        PetacoLog.paste.notice("[paste] detectionApp=\(detectionApp?.localizedName ?? "nil", privacy: .public) bundleID=\(detectionApp?.bundleIdentifier ?? "nil", privacy: .public) clipboardOnly=\(clipboardOnly, privacy: .public)")
 
         if clipboardOnly {
-            // RDP/VMなどキー合成が効かない環境ではクリップボードに残してユーザーに知らせる
-            PetacoLog.paste.notice("[paste] clipboard-only mode for \(app?.localizedName ?? "nil", privacy: .public)")
+            // RDP/VMなどキー合成が効かない環境はクリップボードに残す（復元しない）
+            // ユーザーが手動でCtrl+Vすれば貼り付けられる
             restoreApp?.activate(options: [.activateIgnoringOtherApps])
-            showClipboardOnlyNotification()
             onSuccess?(text)
             return
         }
@@ -133,14 +136,6 @@ enum PasteManager {
         }
     }
 
-    private static func showClipboardOnlyNotification() {
-        let center = UNUserNotificationCenter.current()
-        let content = UNMutableNotificationContent()
-        content.title = "クリップボードにコピーしました"
-        content.body = "Ctrl+V で貼り付けてください"
-        let request = UNNotificationRequest(identifier: "petaco.clipboardonly", content: content, trigger: nil)
-        center.add(request)
-    }
 
     // RDP・VMなどキー合成が効かない環境の検出
     private static let ctrlVBundleIDs: Set<String> = [
