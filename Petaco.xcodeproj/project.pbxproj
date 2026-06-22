@@ -1,0 +1,314 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		29472377F5DA487598D4B2A0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5653131DCF94649918728C8 /* AppDelegate.swift */; };
+		F372F6BFFF604AAF8B649791 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E93E9FB21774F4892E8812D /* ContentView.swift */; };
+		C0F5BB90E53240C1B3DEB780 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82C280110EDA42BEA9212B55 /* HotkeyManager.swift */; };
+		BBA53A12AE524A6C96D79298 /* KeyCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B4AB3F31DD43C2B1F04E5D /* KeyCaptureView.swift */; };
+		D7704557D70245A3B961DA38 /* KeyCodeMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7BADCAE15B442087A7E5BE /* KeyCodeMap.swift */; };
+		B73E18AA325048FFACCA28C5 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F355488C83854E9D92BFED7A /* LaunchAtLoginManager.swift */; };
+		9534219C06D147748CEFCFA5 /* PasteHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */; };
+		A811E099E48741E6965F22D7 /* PasteHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */; };
+		1D17F90B7D924C1894B0F5A5 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B812ED0725F54C28A808DDC9 /* PasteManager.swift */; };
+		84CA103FD19C425588857974 /* PastePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0505812F693E456DA7DA0042 /* PastePreviewView.swift */; };
+		7A14C7BCC1364362BB4F2FD1 /* PetacoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B346699B9441D1A02892F3 /* PetacoApp.swift */; };
+		495C14A8B46A40639B63814D /* QuickPickManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 891745C2101548BD8E62899B /* QuickPickManager.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* QuickPickShortcutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */; };
+		68AB5192B6194C5C879FA877 /* QuickPickOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F750F03CB5D437E9B956852 /* QuickPickOverlayView.swift */; };
+		871754BB68444ABEA20A3C98 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7940B8235B4523B0B575ED /* Snippet.swift */; };
+		D645D05FB50243CF94F85FA0 /* SnippetEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E89DBBEC46431D994A5CE9 /* SnippetEditView.swift */; };
+		FEF809C4DA944C6F87F104C2 /* SnippetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAFE4F324B75442C929852DC /* SnippetStore.swift */; };
+		F6A766186F904D338F229404 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA5D318C76FE46CA817407B1 /* Carbon.framework */; };
+		BAF6809037FF4CE39D9D853D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56DDB2F3207D4AA48B7B1509 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		E5653131DCF94649918728C8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		0E93E9FB21774F4892E8812D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		82C280110EDA42BEA9212B55 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		03B4AB3F31DD43C2B1F04E5D /* KeyCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCaptureView.swift; sourceTree = "<group>"; };
+		5A7BADCAE15B442087A7E5BE /* KeyCodeMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodeMap.swift; sourceTree = "<group>"; };
+		F355488C83854E9D92BFED7A /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHistoryItem.swift; sourceTree = "<group>"; };
+		125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHistoryStore.swift; sourceTree = "<group>"; };
+		B812ED0725F54C28A808DDC9 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
+		0505812F693E456DA7DA0042 /* PastePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastePreviewView.swift; sourceTree = "<group>"; };
+		23B346699B9441D1A02892F3 /* PetacoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetacoApp.swift; sourceTree = "<group>"; };
+		891745C2101548BD8E62899B /* QuickPickManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickManager.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickShortcutStore.swift; sourceTree = "<group>"; };
+		9F750F03CB5D437E9B956852 /* QuickPickOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickOverlayView.swift; sourceTree = "<group>"; };
+		BC7940B8235B4523B0B575ED /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
+		F9E89DBBEC46431D994A5CE9 /* SnippetEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetEditView.swift; sourceTree = "<group>"; };
+		BAFE4F324B75442C929852DC /* SnippetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetStore.swift; sourceTree = "<group>"; };
+		8ED826CB4D82418D8E5F9E28 /* Petaco.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Petaco.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA5D318C76FE46CA817407B1 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
+		56DDB2F3207D4AA48B7B1509 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6F6DFD2B4B9E4192A94B3FB7 /* Petaco.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Petaco.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D4EE18966FD54AB3B914E2CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F6A766186F904D338F229404 /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+
+		C2268290BA6C432F95E369BB = {
+			isa = PBXGroup;
+			children = (
+				887B83B76314445399DFC2B8 /* Petaco */,
+				EFF2F30414F142C781C97C1A /* Products */,
+				A7565BAE04DD4600876A0726 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		887B83B76314445399DFC2B8 /* Petaco */ = {
+			isa = PBXGroup;
+			children = (
+				E5653131DCF94649918728C8 /* AppDelegate.swift */,
+				0E93E9FB21774F4892E8812D /* ContentView.swift */,
+				82C280110EDA42BEA9212B55 /* HotkeyManager.swift */,
+				03B4AB3F31DD43C2B1F04E5D /* KeyCaptureView.swift */,
+				5A7BADCAE15B442087A7E5BE /* KeyCodeMap.swift */,
+				F355488C83854E9D92BFED7A /* LaunchAtLoginManager.swift */,
+				6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */,
+				125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */,
+				B812ED0725F54C28A808DDC9 /* PasteManager.swift */,
+				0505812F693E456DA7DA0042 /* PastePreviewView.swift */,
+				23B346699B9441D1A02892F3 /* PetacoApp.swift */,
+				891745C2101548BD8E62899B /* QuickPickManager.swift */,
+				A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */,
+				9F750F03CB5D437E9B956852 /* QuickPickOverlayView.swift */,
+				BC7940B8235B4523B0B575ED /* Snippet.swift */,
+				F9E89DBBEC46431D994A5CE9 /* SnippetEditView.swift */,
+				BAFE4F324B75442C929852DC /* SnippetStore.swift */,
+				56DDB2F3207D4AA48B7B1509 /* Assets.xcassets */,
+				6F6DFD2B4B9E4192A94B3FB7 /* Petaco.entitlements */,
+			);
+			path = Petaco;
+			sourceTree = "<group>";
+		};
+		EFF2F30414F142C781C97C1A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8ED826CB4D82418D8E5F9E28 /* Petaco.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A7565BAE04DD4600876A0726 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BA5D318C76FE46CA817407B1 /* Carbon.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9C039D07C7184957BC483E6B /* Petaco */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0398E648749A4EDA8E2BEC14 /* Build configuration list for PBXNativeTarget "Petaco" */;
+			buildPhases = (
+				D7DD351922D04629AE0EDF25 /* Sources */,
+				D4EE18966FD54AB3B914E2CC /* Frameworks */,
+				38E5230FA6984E878B51395E /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = Petaco;
+			productName = Petaco;
+			productReference = 8ED826CB4D82418D8E5F9E28 /* Petaco.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C09B1EF29CA64926AE934F5E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1530;
+				LastUpgradeCheck = 1530;
+			};
+			buildConfigurationList = D40709CDC11748EA9665013F /* Build configuration list for PBXProject "Petaco" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C2268290BA6C432F95E369BB;
+			productRefGroup = EFF2F30414F142C781C97C1A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9C039D07C7184957BC483E6B /* Petaco */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		38E5230FA6984E878B51395E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BAF6809037FF4CE39D9D853D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D7DD351922D04629AE0EDF25 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29472377F5DA487598D4B2A0 /* AppDelegate.swift in Sources */,
+				F372F6BFFF604AAF8B649791 /* ContentView.swift in Sources */,
+				C0F5BB90E53240C1B3DEB780 /* HotkeyManager.swift in Sources */,
+				BBA53A12AE524A6C96D79298 /* KeyCaptureView.swift in Sources */,
+				D7704557D70245A3B961DA38 /* KeyCodeMap.swift in Sources */,
+				B73E18AA325048FFACCA28C5 /* LaunchAtLoginManager.swift in Sources */,
+				9534219C06D147748CEFCFA5 /* PasteHistoryItem.swift in Sources */,
+				A811E099E48741E6965F22D7 /* PasteHistoryStore.swift in Sources */,
+				1D17F90B7D924C1894B0F5A5 /* PasteManager.swift in Sources */,
+				84CA103FD19C425588857974 /* PastePreviewView.swift in Sources */,
+				7A14C7BCC1364362BB4F2FD1 /* PetacoApp.swift in Sources */,
+				495C14A8B46A40639B63814D /* QuickPickManager.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* QuickPickShortcutStore.swift in Sources */,
+				68AB5192B6194C5C879FA877 /* QuickPickOverlayView.swift in Sources */,
+				871754BB68444ABEA20A3C98 /* Snippet.swift in Sources */,
+				D645D05FB50243CF94F85FA0 /* SnippetEditView.swift in Sources */,
+				FEF809C4DA944C6F87F104C2 /* SnippetStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D45740973C9F458CAF93732E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7AFD0E5C38624521AC8449E0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		A31F1E5BEA894F21B64D88E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Petaco/Petaco.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development: taku asahina (8653HAB76M)";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.petaco;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E4E15890FD0044C48484BA01 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Petaco/Petaco.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development: taku asahina (8653HAB76M)";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.petaco;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D40709CDC11748EA9665013F /* Build configuration list for PBXProject "Petaco" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D45740973C9F458CAF93732E /* Debug */,
+				7AFD0E5C38624521AC8449E0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0398E648749A4EDA8E2BEC14 /* Build configuration list for PBXNativeTarget "Petaco" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A31F1E5BEA894F21B64D88E4 /* Debug */,
+				E4E15890FD0044C48484BA01 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C09B1EF29CA64926AE934F5E /* Project object */;
+}
