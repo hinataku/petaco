@@ -3,11 +3,12 @@ import Combine
 import AppKit
 import SwiftUI
 import Carbon.HIToolbox
+import CoreGraphics
 
 // 設定したショートカット（初期値: ⌘⇧Space）で一覧オーバーレイを開閉する。
 final class QuickPickManager: ObservableObject {
-    // オーバーレイに表示する選択肢（定型文 + 履歴をまとめたもの）
-    struct Entry: Identifiable {
+    // オーバーレイに表示するコピー履歴の選択肢
+    struct Entry: Identifiable, Equatable {
         let id: UUID
         let content: String
     }
@@ -21,6 +22,7 @@ final class QuickPickManager: ObservableObject {
     private let startsSessionMonitoring: Bool
     private let usesOutsideClickMonitor: Bool
     private var pasteTargetApplication: NSRunningApplication?
+    private var historySubscription: AnyCancellable?
     private let triggerHotKeySignature = OSType(0x51505452) // "QPTR"
     private var triggerHotKeyRef: EventHotKeyRef?
     private var triggerEventHandler: EventHandlerRef?
@@ -39,6 +41,10 @@ final class QuickPickManager: ObservableObject {
         self.shortcutStore = shortcutStore
         self.startsSessionMonitoring = startsSessionMonitoring
         self.usesOutsideClickMonitor = usesOutsideClickMonitor
+        self.historySubscription = historyStore.$items.sink { [weak self] _ in
+            guard let self, self.isShowingOverlay else { return }
+            self.refreshEntries(resetSelection: true)
+        }
         if startsMonitoring {
             startMonitoring()
         }
@@ -98,14 +104,22 @@ final class QuickPickManager: ObservableObject {
             pasteTargetApplication = frontmostApplication
         }
         PetacoLog.focus.notice("Quick pick opened; target=\(self.pasteTargetApplication?.localizedName ?? "Unknown", privacy: .public) pid=\(self.pasteTargetApplication?.processIdentifier ?? 0, privacy: .public)")
-        let snippetEntries = store.snippets.map { Entry(id: $0.id, content: $0.content) }
-        let historyEntries = historyStore.items.map { Entry(id: $0.id, content: $0.content) }
-        entries = snippetEntries + historyEntries
+        refreshEntries()
         selectedIndex = 0
         isShowingOverlay = !entries.isEmpty
         PetacoLog.hotkey.notice("Prepared quick pick entries=\(self.entries.count, privacy: .public), showing=\(self.isShowingOverlay, privacy: .public)")
         if isShowingOverlay {
             presentPanel()
+        }
+    }
+
+    private func refreshEntries(resetSelection: Bool = false) {
+        let historyEntries = historyStore.items.map { Entry(id: $0.id, content: $0.content) }
+        entries = historyEntries
+        if entries.isEmpty || resetSelection {
+            selectedIndex = 0
+        } else {
+            selectedIndex = min(selectedIndex, entries.count - 1)
         }
     }
 
@@ -148,6 +162,7 @@ final class QuickPickManager: ObservableObject {
     private var sessionHotKeyRefs: [EventHotKeyRef] = []
     private var sessionHotKeyHandler: EventHandlerRef?
     private var sessionCancelMonitor: Any?
+    private var arrowRepeatTimer: Timer?
     private var mouseMonitor: Any?
 
     private func startSessionMonitoring() {
@@ -159,6 +174,7 @@ final class QuickPickManager: ObservableObject {
         registerSessionHotKey(.down, keyCode: UInt32(kVK_DownArrow))
         registerSessionHotKey(.confirm, keyCode: UInt32(kVK_Return))
         registerSessionHotKey(.cancel, keyCode: UInt32(kVK_Escape))
+
 
         // その他キーは観測して一覧だけを閉じる。イベントは返さないため、
         // 元アプリ側では通常どおり入力される。
@@ -192,6 +208,7 @@ final class QuickPickManager: ObservableObject {
             NSEvent.removeMonitor(sessionCancelMonitor)
         }
         sessionCancelMonitor = nil
+        stopArrowRepeat()
         if let mouseMonitor = mouseMonitor {
             NSEvent.removeMonitor(mouseMonitor)
         }
@@ -228,13 +245,39 @@ final class QuickPickManager: ObservableObject {
         switch id {
         case .up:
             moveSelection(by: -1)
+            startArrowRepeat(keyCode: UInt16(kVK_UpArrow), delta: -1)
         case .down:
             moveSelection(by: 1)
+            startArrowRepeat(keyCode: UInt16(kVK_DownArrow), delta: 1)
         case .confirm:
             confirmAndPaste()
         case .cancel:
             cancelOverlay()
         }
+    }
+
+    private func startArrowRepeat(keyCode: UInt16, delta: Int) {
+        stopArrowRepeat()
+        let delay: TimeInterval = 0.4
+        let interval: TimeInterval = 0.12
+        arrowRepeatTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.arrowRepeatTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+                guard let self,
+                      self.isShowingOverlay,
+                      CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(keyCode)) else {
+                    timer.invalidate()
+                    self?.arrowRepeatTimer = nil
+                    return
+                }
+                self.moveSelection(by: delta)
+            }
+        }
+    }
+
+    private func stopArrowRepeat() {
+        arrowRepeatTimer?.invalidate()
+        arrowRepeatTimer = nil
     }
 
     private func moveSelection(by delta: Int) {

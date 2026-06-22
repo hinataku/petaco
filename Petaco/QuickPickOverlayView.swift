@@ -15,15 +15,28 @@ struct QuickPickOverlayView: View {
 
             Divider()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(manager.entries.enumerated()), id: \.element.id) { index, entry in
-                        EntryRow(
-                            content: entry.content,
-                            isSelected: index == manager.selectedIndex
-                        ) {
-                            manager.selectAndPaste(at: index)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(manager.entries.enumerated()), id: \.element.id) { index, entry in
+                            EntryRow(
+                                content: entry.content,
+                                isSelected: index == manager.selectedIndex
+                            ) {
+                                manager.selectAndPaste(at: index)
+                            }
+                            .id(index)
                         }
+                    }
+                }
+                .onChange(of: manager.selectedIndex) { selectedIndex in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        proxy.scrollTo(selectedIndex, anchor: .center)
+                    }
+                }
+                .onChange(of: manager.entries) { _ in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        proxy.scrollTo(0, anchor: .top)
                     }
                 }
             }
