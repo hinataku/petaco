@@ -2,6 +2,10 @@
 
 登録した定型文をショートカットキーでどこでも即貼り付けできる、macOS用メニューバーアプリです。
 
+
+<video src="https://github.com/user-attachments/assets/d9f283d9-4c89-463b-961e-9cefcf674095" width="220" controls muted loop playsinline></video>
+
+
 ## 機能
 
 ### 定型文ショートカット
