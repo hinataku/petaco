@@ -5,6 +5,8 @@
 
 <video src="https://github.com/user-attachments/assets/d9f283d9-4c89-463b-961e-9cefcf674095" width="220" controls muted loop playsinline></video>
 
+1.0.0
+https://github.com/hinataku/petaco/blob/master/Petaco-1.0.0.zip
 
 ## 機能
 
