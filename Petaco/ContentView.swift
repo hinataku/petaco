@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var isAddingQuickPickShortcut = false
     @State private var editingQuickPickShortcut: QuickPickShortcut?
     @State private var duplicateWarning: String?
+    @State private var isConfirmingClearAll = false
 
     // 長押しでプレビューを出す対象のID（nilなら非表示）
     @State private var previewingID: UUID?
@@ -50,6 +51,12 @@ struct ContentView: View {
             hotkeyManager.reloadAllHotkeys()
             checkDuplicates()
         }
+        .alert("コピー履歴をすべて削除しますか？", isPresented: $isConfirmingClearAll) {
+            Button("すべて削除", role: .destructive) {
+                historyStore.clearAll()
+            }
+            Button("キャンセル", role: .cancel) {}
+        }
     }
 
     // MARK: - 左側: 登録済み定型文一覧
@@ -60,20 +67,27 @@ struct ContentView: View {
                     .font(.title2)
                     .bold()
                 Spacer()
+                Toggle("自動的に立ち上げる", isOn: $launchAtLogin.isEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                    .onAppear {
+                        launchAtLogin.refresh()
+                    }
+            }
+            .padding()
+
+            HStack {
+                Text("定型文貼り付け")
+                    .font(.headline)
+                Spacer()
                 Button {
                     isAddingNew = true
                 } label: {
                     Label("追加", systemImage: "plus")
                 }
             }
-            .padding()
-
-            Toggle("PC起動時に自動的に立ち上げる", isOn: $launchAtLogin.isEnabled)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .onAppear {
-                    launchAtLogin.refresh()
-                }
+            .padding(.horizontal)
+            .padding(.bottom)
 
             if let warning = duplicateWarning {
                 Text(warning)
@@ -100,9 +114,15 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
 
-                        Text(snippet.content)
-                            .font(.body)
-                            .lineLimit(1)
+                        Button {
+                            editingSnippet = snippet
+                        } label: {
+                            Text(snippet.content)
+                                .font(.body)
+                                .lineLimit(1)
+                                .foregroundColor(.primary)
+                        }
+                        .buttonStyle(.plain)
 
                         Spacer()
 
@@ -111,23 +131,20 @@ struct ContentView: View {
                                     previewingID: $previewingID)
 
                         Button {
-                            editingSnippet = snippet
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
-                        .buttonStyle(.borderless)
-
-                        Button {
                             store.delete(snippet)
                             hotkeyManager.reloadAllHotkeys()
                         } label: {
-                            Image(systemName: "trash")
+                            Image(systemName: "xmark")
                         }
                         .buttonStyle(.borderless)
                     }
                     .padding(.vertical, 4)
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+            .padding(.horizontal)
+            .padding(.bottom)
         }
     }
 
@@ -136,9 +153,8 @@ struct ContentView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("履歴ショートカット")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("履歴貼り付け")
+                        .font(.headline)
                     Spacer()
                     Button {
                         quickPickShortcutStore.isEditing = true
@@ -146,7 +162,6 @@ struct ContentView: View {
                     } label: {
                         Label("追加", systemImage: "plus")
                     }
-                    .font(.caption)
                 }
 
                 ForEach(quickPickShortcutStore.shortcuts) { shortcut in
@@ -180,12 +195,11 @@ struct ContentView: View {
 
             HStack {
                 Text("コピー履歴")
-                    .font(.title3)
-                    .bold()
+                    .font(.headline)
                 Spacer()
                 if !historyStore.items.isEmpty {
                     Button("すべて削除") {
-                        historyStore.clearAll()
+                        isConfirmingClearAll = true
                     }
                     .font(.caption)
                 }
@@ -199,28 +213,39 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
                 Spacer()
             } else {
-                List {
-                    ForEach(historyStore.items) { item in
-                        HStack {
-                            Text(item.content)
-                                .font(.body)
-                                .lineLimit(2)
-                            Spacer()
+                ScrollViewReader { proxy in
+                    List {
+                        ForEach(historyStore.items) { item in
+                            HStack {
+                                Text(item.content)
+                                    .font(.body)
+                                    .lineLimit(2)
+                                Spacer()
 
-                            PasteButton(id: item.id, content: item.content,
-                                        onPaste: pasteFromWindow,
-                                        previewingID: $previewingID)
+                                PasteButton(id: item.id, content: item.content,
+                                            onPaste: pasteFromWindow,
+                                            previewingID: $previewingID)
 
-                            Button {
-                                historyStore.delete(item)
-                            } label: {
-                                Image(systemName: "trash")
+                                Button {
+                                    historyStore.delete(item)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                .buttonStyle(.borderless)
                             }
-                            .buttonStyle(.borderless)
+                            .padding(.vertical, 2)
                         }
-                        .padding(.vertical, 2)
+                    }
+                    .onChange(of: historyStore.items.first?.id) { firstID in
+                        if let firstID {
+                            proxy.scrollTo(firstID, anchor: .top)
+                        }
                     }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                .padding(.horizontal)
+                .padding(.bottom)
             }
         }
     }

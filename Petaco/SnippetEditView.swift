@@ -38,19 +38,18 @@ struct SnippetEditView: View {
                     Text("ショートカットキー")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    HStack {
+                    Button {
+                        onKeyCaptureChanged(true)
+                        isShowingKeyCaptureDialog = true
+                    } label: {
                         Text(currentShortcutDisplay)
                             .font(.system(.body, design: .monospaced))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(Color.gray.opacity(0.15))
                             .cornerRadius(6)
-
-                        Button("キーを変更") {
-                            onKeyCaptureChanged(true)
-                            isShowingKeyCaptureDialog = true
-                        }
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Spacer()
@@ -83,7 +82,8 @@ struct SnippetEditView: View {
                         onDismiss: {
                             onKeyCaptureChanged(false)
                             isShowingKeyCaptureDialog = false
-                        }
+                        },
+                        startCapturing: true
                     )
                     .background(.regularMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -113,12 +113,13 @@ struct SnippetShortcutCaptureDialog: View {
     @State private var draftModifiers: UInt32
     @State private var isCapturing = false
 
-    init(keyCode: Binding<UInt32>, modifiers: Binding<UInt32>, onDismiss: @escaping () -> Void) {
+    init(keyCode: Binding<UInt32>, modifiers: Binding<UInt32>, onDismiss: @escaping () -> Void, startCapturing: Bool = false) {
         _keyCode = keyCode
         _modifiers = modifiers
         self.onDismiss = onDismiss
         _draftKeyCode = State(initialValue: keyCode.wrappedValue)
         _draftModifiers = State(initialValue: modifiers.wrappedValue)
+        _isCapturing = State(initialValue: startCapturing)
     }
 
     var body: some View {

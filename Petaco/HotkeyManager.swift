@@ -83,5 +83,5 @@ final class HotkeyManager {
         } else {
             PetacoLog.hotkey.error("Failed to register keyCode=\(snippet.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public), status=\(status, privacy: .public)")
         }
-    }
+    }aN5!9iLnPrdy
 }

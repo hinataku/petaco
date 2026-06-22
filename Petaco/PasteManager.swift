@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UserNotifications
 
 // 指定テキストを一時的にクリップボードへ置き、対象アプリへ自動ペーストする。
 enum PasteManager {
@@ -81,25 +82,44 @@ enum PasteManager {
         } else {
             applicationToRestore = nil
         }
+        let restoreApp = applicationToRestore
+        let targetApp = targetApplication
+        let app = targetApp ?? restoreApp
+        let clipboardOnly = Self.needsCtrlV(app)
+
+        if clipboardOnly {
+            // RDP/VMなどキー合成が効かない環境ではクリップボードに残してユーザーに知らせる
+            PetacoLog.paste.notice("[paste] clipboard-only mode for \(app?.localizedName ?? "nil", privacy: .public)")
+            restoreApp?.activate(options: [.activateIgnoringOtherApps])
+            showClipboardOnlyNotification()
+            onSuccess?(text)
+            return
+        }
+
         DispatchQueue.main.async {
             let source = CGEventSource(stateID: .hidSystemState)
+            let modKeyCode: CGKeyCode = 0x37  // left Command
+            let modDown = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: true)
             let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
-            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+            let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+            let modUp   = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false)
             keyDown?.flags = .maskCommand
-            keyUp?.flags = .maskCommand
-            if let targetApplication, !targetApplication.isTerminated {
-                // クイック選択では貼り付け先プロセスを固定しているため、
-                // システム全体ではなくそのプロセスへ直接 Cmd+V を送る。
-                keyDown?.postToPid(targetApplication.processIdentifier)
-                keyUp?.postToPid(targetApplication.processIdentifier)
-                PetacoLog.paste.notice("Posted synthetic Cmd+V to pid=\(targetApplication.processIdentifier, privacy: .public)")
+            keyUp?.flags   = .maskCommand
+
+            if let targetApp, !targetApp.isTerminated {
+                modDown?.postToPid(targetApp.processIdentifier)
+                keyDown?.postToPid(targetApp.processIdentifier)
+                keyUp?.postToPid(targetApp.processIdentifier)
+                modUp?.postToPid(targetApp.processIdentifier)
+                PetacoLog.paste.notice("[paste] sent Cmd+V via postToPid=\(targetApp.processIdentifier, privacy: .public)")
             } else {
+                modDown?.post(tap: .cghidEventTap)
                 keyDown?.post(tap: .cghidEventTap)
                 keyUp?.post(tap: .cghidEventTap)
-                PetacoLog.paste.notice("Posted synthetic Cmd+V to active application")
+                modUp?.post(tap: .cghidEventTap)
+                PetacoLog.paste.notice("[paste] sent Cmd+V via cghidEventTap")
             }
-            // ペースト後の続けて行うキー入力も元のアプリに届くよう、最後にもう一度戻す。
-            applicationToRestore?.activate(options: [.activateIgnoringOtherApps])
+            restoreApp?.activate(options: [.activateIgnoringOtherApps])
             onSuccess?(text)
         }
 
@@ -111,6 +131,28 @@ enum PasteManager {
                 ClipboardMonitor.ignore(changeCount: pasteboard.changeCount)
             }
         }
+    }
+
+    private static func showClipboardOnlyNotification() {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "クリップボードにコピーしました"
+        content.body = "Ctrl+V で貼り付けてください"
+        let request = UNNotificationRequest(identifier: "petaco.clipboardonly", content: content, trigger: nil)
+        center.add(request)
+    }
+
+    // RDP・VMなどキー合成が効かない環境の検出
+    private static let ctrlVBundleIDs: Set<String> = [
+        "com.microsoft.rdc.macos",   // Windows App (Microsoft Remote Desktop)
+        "com.parallels.desktop",     // Parallels Desktop
+        "com.vmware.fusion",         // VMware Fusion
+        "com.utmapp.UTM",            // UTM
+    ]
+
+    private static func needsCtrlV(_ app: NSRunningApplication?) -> Bool {
+        guard let bundleID = app?.bundleIdentifier else { return false }
+        return ctrlVBundleIDs.contains(bundleID)
     }
 
     private static func requestAccessibilityPermissionOnce() {
