@@ -19,7 +19,6 @@ final class QuickPickManager: ObservableObject {
     private let historyStore: PasteHistoryStore
     private let shortcutStore: QuickPickShortcutStore
     private let startsSessionMonitoring: Bool
-    private let usesSessionCancelMonitor: Bool
     private let usesOutsideClickMonitor: Bool
     private var pasteTargetApplication: NSRunningApplication?
     private let triggerHotKeySignature = OSType(0x51505452) // "QPTR"
@@ -33,14 +32,12 @@ final class QuickPickManager: ObservableObject {
         shortcutStore: QuickPickShortcutStore,
         startsMonitoring: Bool = true,
         startsSessionMonitoring: Bool = true,
-        usesSessionCancelMonitor: Bool = true,
         usesOutsideClickMonitor: Bool = true
     ) {
         self.store = store
         self.historyStore = historyStore
         self.shortcutStore = shortcutStore
         self.startsSessionMonitoring = startsSessionMonitoring
-        self.usesSessionCancelMonitor = usesSessionCancelMonitor
         self.usesOutsideClickMonitor = usesOutsideClickMonitor
         if startsMonitoring {
             startMonitoring()
@@ -51,24 +48,38 @@ final class QuickPickManager: ObservableObject {
     private func startMonitoring() {
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
-            guard let eventRef, let userData else { return noErr }
+            guard let eventRef, let userData else { return OSStatus(eventNotHandledErr) }
             let manager = Unmanaged<QuickPickManager>.fromOpaque(userData).takeUnretainedValue()
             var hotKeyID = EventHotKeyID()
             GetEventParameter(eventRef, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
-            guard hotKeyID.signature == manager.triggerHotKeySignature else { return noErr }
+            guard hotKeyID.signature == manager.triggerHotKeySignature else { return OSStatus(eventNotHandledErr) }
             manager.handlePossibleTrigger()
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &triggerEventHandler)
 
+        registerTriggerHotKey()
+    }
+
+    private func registerTriggerHotKey() {
+        if let triggerHotKeyRef {
+            UnregisterEventHotKey(triggerHotKeyRef)
+            self.triggerHotKeyRef = nil
+        }
+
         var ref: EventHotKeyRef?
         let hotKeyID = EventHotKeyID(signature: triggerHotKeySignature, id: 1)
         let modifiers = Modifiers(rawValue: shortcutStore.modifiers).carbonHotKeyModifiers
-        if RegisterEventHotKey(shortcutStore.keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref) == noErr {
+        let status = RegisterEventHotKey(shortcutStore.keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref)
+        if status == noErr {
             triggerHotKeyRef = ref
+            PetacoLog.hotkey.notice("Registered quick pick trigger keyCode=\(self.shortcutStore.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public)")
+        } else {
+            PetacoLog.hotkey.error("Failed to register quick pick trigger status=\(status, privacy: .public)")
         }
     }
 
     private func handlePossibleTrigger() {
+        PetacoLog.hotkey.notice("Received quick pick trigger, overlayVisible=\(self.isShowingOverlay, privacy: .public)")
         // 既に表示中なら閉じる（トグルとして使えるようにする）
         if isShowingOverlay {
             cancelOverlay()
@@ -92,6 +103,7 @@ final class QuickPickManager: ObservableObject {
         entries = snippetEntries + historyEntries
         selectedIndex = 0
         isShowingOverlay = !entries.isEmpty
+        PetacoLog.hotkey.notice("Prepared quick pick entries=\(self.entries.count, privacy: .public), showing=\(self.isShowingOverlay, privacy: .public)")
         if isShowingOverlay {
             presentPanel()
         }
@@ -135,7 +147,6 @@ final class QuickPickManager: ObservableObject {
     private let sessionHotKeySignature = OSType(0x51504B53) // "QPHS"
     private var sessionHotKeyRefs: [EventHotKeyRef] = []
     private var sessionHotKeyHandler: EventHandlerRef?
-    private var sessionCancelMonitor: Any?
     private var mouseMonitor: Any?
 
     private func startSessionMonitoring() {
@@ -147,19 +158,6 @@ final class QuickPickManager: ObservableObject {
         registerSessionHotKey(.down, keyCode: UInt32(kVK_DownArrow))
         registerSessionHotKey(.confirm, keyCode: UInt32(kVK_Return))
         registerSessionHotKey(.cancel, keyCode: UInt32(kVK_Escape))
-
-        if usesSessionCancelMonitor {
-            // それ以外のキーは一覧を閉じる。イベントを通過させるため、以後の操作は
-            // 元アプリがそのまま受け取れる。
-            sessionCancelMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-                guard let self, self.isShowingOverlay, !event.isARepeat else { return }
-                let handledKeyCodes: Set<UInt16> = [
-                    UInt16(kVK_UpArrow), UInt16(kVK_DownArrow), UInt16(kVK_Return), UInt16(kVK_Escape)
-                ]
-                guard !handledKeyCodes.contains(event.keyCode) else { return }
-                DispatchQueue.main.async { self.cancelOverlay() }
-            }
-        }
         if usesOutsideClickMonitor {
             // オーバーレイ外のクリックで閉じる
             mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -173,14 +171,11 @@ final class QuickPickManager: ObservableObject {
     }
 
     private func stopSessionMonitoring() {
+        PetacoLog.hotkey.notice("Stopping quick pick session hotkeys count=\(self.sessionHotKeyRefs.count, privacy: .public)")
         for ref in sessionHotKeyRefs {
             UnregisterEventHotKey(ref)
         }
         sessionHotKeyRefs.removeAll()
-        if let sessionCancelMonitor {
-            NSEvent.removeMonitor(sessionCancelMonitor)
-        }
-        sessionCancelMonitor = nil
         if let mouseMonitor = mouseMonitor {
             NSEvent.removeMonitor(mouseMonitor)
         }
@@ -191,21 +186,21 @@ final class QuickPickManager: ObservableObject {
         guard sessionHotKeyHandler == nil else { return }
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
-            guard let eventRef, let userData else { return noErr }
+            guard let eventRef, let userData else { return OSStatus(eventNotHandledErr) }
             let manager = Unmanaged<QuickPickManager>.fromOpaque(userData).takeUnretainedValue()
             var hotKeyID = EventHotKeyID()
             GetEventParameter(eventRef, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
             guard hotKeyID.signature == manager.sessionHotKeySignature,
-                  let id = SessionHotKeyID(rawValue: hotKeyID.id) else { return noErr }
+                  let id = SessionHotKeyID(rawValue: hotKeyID.id) else { return OSStatus(eventNotHandledErr) }
             manager.handleSessionHotKey(id)
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &sessionHotKeyHandler)
     }
 
-    private func registerSessionHotKey(_ id: SessionHotKeyID, keyCode: UInt32) {
+    private func registerSessionHotKey(_ id: SessionHotKeyID, keyCode: UInt32, modifiers: UInt32 = 0) {
         var ref: EventHotKeyRef?
         let hotKeyID = EventHotKeyID(signature: sessionHotKeySignature, id: id.rawValue)
-        if RegisterEventHotKey(keyCode, 0, hotKeyID, GetApplicationEventTarget(), 0, &ref) == noErr,
+        if RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref) == noErr,
            let ref {
             sessionHotKeyRefs.append(ref)
         }
