@@ -18,9 +18,6 @@ struct ContentView: View {
     @State private var isConfirmingClearAll = false
     @State private var revealedSnippetIDs: Set<UUID> = []
 
-    // 長押しでプレビューを出す対象のID（nilなら非表示）
-    @State private var previewingID: UUID?
-
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
@@ -247,10 +244,6 @@ struct ContentView: View {
                                 .lineLimit(2)
                             Spacer()
 
-                            PasteButton(id: item.id, content: item.content,
-                                        onPaste: pasteFromWindow,
-                                        previewingID: $previewingID)
-
                             Button {
                                 historyStore.delete(item)
                             } label: {
@@ -269,11 +262,6 @@ struct ContentView: View {
                 .padding(.bottom)
             }
         }
-    }
-
-    // 一覧・履歴の貼り付けボタンから実行する。コピー履歴への記録はClipboardMonitorが担当する。
-    private func pasteFromWindow(_ text: String) {
-        PasteManager.paste(text: text)
     }
 
     private func shortcutLabel(for snippet: Snippet) -> String {
