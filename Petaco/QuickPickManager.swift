@@ -147,6 +147,7 @@ final class QuickPickManager: ObservableObject {
     private let sessionHotKeySignature = OSType(0x51504B53) // "QPHS"
     private var sessionHotKeyRefs: [EventHotKeyRef] = []
     private var sessionHotKeyHandler: EventHandlerRef?
+    private var sessionCancelMonitor: Any?
     private var mouseMonitor: Any?
 
     private func startSessionMonitoring() {
@@ -158,6 +159,17 @@ final class QuickPickManager: ObservableObject {
         registerSessionHotKey(.down, keyCode: UInt32(kVK_DownArrow))
         registerSessionHotKey(.confirm, keyCode: UInt32(kVK_Return))
         registerSessionHotKey(.cancel, keyCode: UInt32(kVK_Escape))
+
+        // その他キーは観測して一覧だけを閉じる。イベントは返さないため、
+        // 元アプリ側では通常どおり入力される。
+        sessionCancelMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self, self.isShowingOverlay, !event.isARepeat else { return }
+            let handledKeyCodes: Set<UInt16> = [
+                UInt16(kVK_UpArrow), UInt16(kVK_DownArrow), UInt16(kVK_Return), UInt16(kVK_Escape)
+            ]
+            guard !handledKeyCodes.contains(event.keyCode) else { return }
+            DispatchQueue.main.async { self.cancelOverlay() }
+        }
         if usesOutsideClickMonitor {
             // オーバーレイ外のクリックで閉じる
             mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -176,6 +188,10 @@ final class QuickPickManager: ObservableObject {
             UnregisterEventHotKey(ref)
         }
         sessionHotKeyRefs.removeAll()
+        if let sessionCancelMonitor {
+            NSEvent.removeMonitor(sessionCancelMonitor)
+        }
+        sessionCancelMonitor = nil
         if let mouseMonitor = mouseMonitor {
             NSEvent.removeMonitor(mouseMonitor)
         }

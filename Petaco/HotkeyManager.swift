@@ -84,3 +84,4 @@ final class HotkeyManager {
         }
     }
 }
+
