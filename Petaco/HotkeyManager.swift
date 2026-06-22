@@ -55,16 +55,24 @@ final class HotkeyManager {
 
     // 現在の store.snippets の内容に合わせて、全ホットキーを登録し直す
     func reloadAllHotkeys() {
-        // 既存登録を全解除
+        unregisterAllHotkeys()
+
+        for snippet in store.snippets {
+            register(snippet: snippet)
+        }
+    }
+
+    // キー変更の入力待ち中など、既存ショートカットを一時的に停止する。
+    func suspendAllHotkeys() {
+        unregisterAllHotkeys()
+    }
+
+    private func unregisterAllHotkeys() {
         for (_, ref) in hotKeyRefs {
             UnregisterEventHotKey(ref)
         }
         hotKeyRefs.removeAll()
         hotKeyIDToSnippetID.removeAll()
-
-        for snippet in store.snippets {
-            register(snippet: snippet)
-        }
     }
 
     private func register(snippet: Snippet) {
@@ -84,4 +92,3 @@ final class HotkeyManager {
         }
     }
 }
-

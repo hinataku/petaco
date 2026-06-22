@@ -9,11 +9,11 @@ struct ContentView: View {
 
     @State private var editingSnippet: Snippet?
     @State private var isAddingNew = false
+    @State private var isEditingQuickPickShortcut = false
     @State private var duplicateWarning: String?
 
     // 長押しでプレビューを出す対象のID（nilなら非表示）
     @State private var previewingID: UUID?
-    @State private var isCapturingQuickPickShortcut = false
 
     var body: some View {
         ZStack {
@@ -36,6 +36,8 @@ struct ContentView: View {
                 editorOverlay(snippet: newSnippetTemplate(), isNew: true) {
                     isAddingNew = false
                 }
+            } else if isEditingQuickPickShortcut {
+                shortcutEditorOverlay
             }
         }
         .onAppear {
@@ -127,18 +129,11 @@ struct ContentView: View {
                     .padding(.vertical, 4)
                     .background(Color.gray.opacity(0.15))
                     .cornerRadius(6)
-                Button(isCapturingQuickPickShortcut ? "キーを押してください..." : "変更") {
-                    isCapturingQuickPickShortcut = true
+                Button("変更") {
+                    quickPickShortcutStore.isEditing = true
+                    isEditingQuickPickShortcut = true
                 }
                 .font(.caption)
-                if isCapturingQuickPickShortcut {
-                    KeyCaptureView(
-                        keyCode: $quickPickShortcutStore.keyCode,
-                        modifiers: $quickPickShortcutStore.modifiers,
-                        isCapturing: $isCapturingQuickPickShortcut
-                    )
-                    .frame(width: 1, height: 1)
-                }
                 Spacer()
             }
             .padding(.horizontal)
@@ -225,6 +220,13 @@ struct ContentView: View {
                     checkDuplicates()
                 },
                 onDismiss: onDismiss,
+                onKeyCaptureChanged: { isCapturing in
+                    if isCapturing {
+                        hotkeyManager.suspendAllHotkeys()
+                    } else {
+                        hotkeyManager.reloadAllHotkeys()
+                    }
+                },
                 snippet: snippet,
                 isNew: isNew
             )
@@ -246,6 +248,90 @@ struct ContentView: View {
         } else {
             duplicateWarning = nil
         }
+    }
+
+    private var shortcutEditorOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+            QuickPickShortcutEditView(
+                store: quickPickShortcutStore,
+                onDismiss: {
+                    quickPickShortcutStore.isEditing = false
+                    isEditingQuickPickShortcut = false
+                }
+            )
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(radius: 20)
+        }
+    }
+}
+
+private struct QuickPickShortcutEditView: View {
+    @ObservedObject var store: QuickPickShortcutStore
+    let onDismiss: () -> Void
+
+    @State private var keyCode: UInt32
+    @State private var modifiers: UInt32
+    @State private var isCapturing = true
+
+    init(store: QuickPickShortcutStore, onDismiss: @escaping () -> Void) {
+        self.store = store
+        self.onDismiss = onDismiss
+        _keyCode = State(initialValue: store.keyCode)
+        _modifiers = State(initialValue: store.modifiers)
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("履歴ショートカットを変更")
+                .font(.headline)
+
+            Text(isCapturing ? "ショートカットキーを押してください" : "入力されたショートカット")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text(shortcutLabel)
+                .font(.system(size: 28, weight: .medium, design: .monospaced))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(Color.gray.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            KeyCaptureView(
+                keyCode: $keyCode,
+                modifiers: $modifiers,
+                isCapturing: $isCapturing
+            )
+            .frame(width: 1, height: 1)
+
+            HStack {
+                Button("キャンセル", action: onDismiss)
+                Spacer()
+                Button("入力し直す") {
+                    isCapturing = false
+                    DispatchQueue.main.async {
+                        isCapturing = true
+                    }
+                }
+                Button("保存") {
+                    store.keyCode = keyCode
+                    store.modifiers = modifiers
+                    onDismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+        .onDisappear {
+            store.isEditing = false
+        }
+    }
+
+    private var shortcutLabel: String {
+        Modifiers(rawValue: modifiers).displaySymbols + KeyCodeMap.char(for: keyCode)
     }
 }
 

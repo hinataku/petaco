@@ -23,6 +23,8 @@ final class QuickPickManager: ObservableObject {
     private let usesOutsideClickMonitor: Bool
     private var pasteTargetApplication: NSRunningApplication?
     private var historySubscription: AnyCancellable?
+    private var shortcutSubscription: AnyCancellable?
+    private var shortcutEditingSubscription: AnyCancellable?
     private let triggerHotKeySignature = OSType(0x51505452) // "QPTR"
     private var triggerHotKeyRef: EventHotKeyRef?
     private var triggerEventHandler: EventHandlerRef?
@@ -45,6 +47,27 @@ final class QuickPickManager: ObservableObject {
             guard let self, self.isShowingOverlay else { return }
             self.refreshEntries(resetSelection: true)
         }
+        self.shortcutSubscription = shortcutStore.$keyCode
+            .combineLatest(shortcutStore.$modifiers)
+            .dropFirst()
+            .sink { [weak self] _, _ in
+                DispatchQueue.main.async {
+                    guard let self, !self.isShowingOverlay else { return }
+                    self.registerTriggerHotKey()
+                }
+            }
+        self.shortcutEditingSubscription = shortcutStore.$isEditing
+            .dropFirst()
+            .sink { [weak self] isEditing in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if isEditing {
+                        self.unregisterTriggerHotKey()
+                    } else if !self.isShowingOverlay {
+                        self.registerTriggerHotKey()
+                    }
+                }
+            }
         if startsMonitoring {
             startMonitoring()
         }
@@ -67,6 +90,7 @@ final class QuickPickManager: ObservableObject {
     }
 
     private func registerTriggerHotKey() {
+        guard !shortcutStore.isEditing else { return }
         if let triggerHotKeyRef {
             UnregisterEventHotKey(triggerHotKeyRef)
             self.triggerHotKeyRef = nil
@@ -81,6 +105,13 @@ final class QuickPickManager: ObservableObject {
             PetacoLog.hotkey.notice("Registered quick pick trigger keyCode=\(self.shortcutStore.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public)")
         } else {
             PetacoLog.hotkey.error("Failed to register quick pick trigger status=\(status, privacy: .public)")
+        }
+    }
+
+    private func unregisterTriggerHotKey() {
+        if let triggerHotKeyRef {
+            UnregisterEventHotKey(triggerHotKeyRef)
+            self.triggerHotKeyRef = nil
         }
     }
 

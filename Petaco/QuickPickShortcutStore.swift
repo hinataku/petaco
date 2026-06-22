@@ -11,6 +11,8 @@ final class QuickPickShortcutStore: ObservableObject {
 
     @Published var keyCode: UInt32 { didSet { save() } }
     @Published var modifiers: UInt32 { didSet { save() } }
+    // ショートカット変更オーバーレイ表示中は、既存のグローバル登録を停止する。
+    @Published var isEditing = false
 
     init() {
         let defaults = UserDefaults.standard
