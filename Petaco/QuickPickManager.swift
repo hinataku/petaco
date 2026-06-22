@@ -19,9 +19,12 @@ final class QuickPickManager: ObservableObject {
     private let historyStore: PasteHistoryStore
     private let shortcutStore: QuickPickShortcutStore
     private let startsSessionMonitoring: Bool
+    private let usesSessionCancelMonitor: Bool
+    private let usesOutsideClickMonitor: Bool
     private var pasteTargetApplication: NSRunningApplication?
-    private var globalKeyDownMonitor: Any?
-    private var localMonitor: Any?
+    private let triggerHotKeySignature = OSType(0x51505452) // "QPTR"
+    private var triggerHotKeyRef: EventHotKeyRef?
+    private var triggerEventHandler: EventHandlerRef?
     private var overlayPanel: NSPanel?
 
     init(
@@ -29,36 +32,43 @@ final class QuickPickManager: ObservableObject {
         historyStore: PasteHistoryStore,
         shortcutStore: QuickPickShortcutStore,
         startsMonitoring: Bool = true,
-        startsSessionMonitoring: Bool = true
+        startsSessionMonitoring: Bool = true,
+        usesSessionCancelMonitor: Bool = true,
+        usesOutsideClickMonitor: Bool = true
     ) {
         self.store = store
         self.historyStore = historyStore
         self.shortcutStore = shortcutStore
         self.startsSessionMonitoring = startsSessionMonitoring
+        self.usesSessionCancelMonitor = usesSessionCancelMonitor
+        self.usesOutsideClickMonitor = usesOutsideClickMonitor
         if startsMonitoring {
             startMonitoring()
         }
     }
 
-    // 設定したショートカットの押下をグローバルに監視開始
+    // 設定したショートカットだけをCarbonへ登録する。NSEventの全キー監視は使わない。
     private func startMonitoring() {
-        globalKeyDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            self?.handlePossibleTrigger(event)
-        }
-        // アプリ自身がフォーカスを持っている場合（自分のウィンドウ操作中）にも検知できるよう、ローカル監視も併用
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            self?.handlePossibleTrigger(event)
-            return event
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
+            guard let eventRef, let userData else { return noErr }
+            let manager = Unmanaged<QuickPickManager>.fromOpaque(userData).takeUnretainedValue()
+            var hotKeyID = EventHotKeyID()
+            GetEventParameter(eventRef, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
+            guard hotKeyID.signature == manager.triggerHotKeySignature else { return noErr }
+            manager.handlePossibleTrigger()
+            return noErr
+        }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &triggerEventHandler)
+
+        var ref: EventHotKeyRef?
+        let hotKeyID = EventHotKeyID(signature: triggerHotKeySignature, id: 1)
+        let modifiers = Modifiers(rawValue: shortcutStore.modifiers).carbonHotKeyModifiers
+        if RegisterEventHotKey(shortcutStore.keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref) == noErr {
+            triggerHotKeyRef = ref
         }
     }
 
-    private func handlePossibleTrigger(_ event: NSEvent) {
-        // 押し続けた際のキーリピートで、開いた直後に閉じないようにする。
-        guard !event.isARepeat else { return }
-        guard event.keyCode == UInt16(shortcutStore.keyCode) else { return }
-        let relevantFlags = event.modifierFlags.intersection([.command, .shift, .option, .control])
-        guard relevantFlags == modifierFlags(for: shortcutStore.modifiers) else { return }
-
+    private func handlePossibleTrigger() {
         // 既に表示中なら閉じる（トグルとして使えるようにする）
         if isShowingOverlay {
             cancelOverlay()
@@ -138,22 +148,26 @@ final class QuickPickManager: ObservableObject {
         registerSessionHotKey(.confirm, keyCode: UInt32(kVK_Return))
         registerSessionHotKey(.cancel, keyCode: UInt32(kVK_Escape))
 
-        // それ以外のキーは一覧を閉じる。イベントを通過させるため、以後の操作は
-        // 元アプリがそのまま受け取れる。
-        sessionCancelMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            guard let self, self.isShowingOverlay, !event.isARepeat else { return }
-            let handledKeyCodes: Set<UInt16> = [
-                UInt16(kVK_UpArrow), UInt16(kVK_DownArrow), UInt16(kVK_Return), UInt16(kVK_Escape)
-            ]
-            guard !handledKeyCodes.contains(event.keyCode) else { return }
-            DispatchQueue.main.async { self.cancelOverlay() }
-        }
-        // オーバーレイ外のクリックで閉じる
-        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let self, let panel = self.overlayPanel else { return }
-            let screenPoint = NSEvent.mouseLocation
-            if !NSMouseInRect(screenPoint, panel.frame, false) {
+        if usesSessionCancelMonitor {
+            // それ以外のキーは一覧を閉じる。イベントを通過させるため、以後の操作は
+            // 元アプリがそのまま受け取れる。
+            sessionCancelMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+                guard let self, self.isShowingOverlay, !event.isARepeat else { return }
+                let handledKeyCodes: Set<UInt16> = [
+                    UInt16(kVK_UpArrow), UInt16(kVK_DownArrow), UInt16(kVK_Return), UInt16(kVK_Escape)
+                ]
+                guard !handledKeyCodes.contains(event.keyCode) else { return }
                 DispatchQueue.main.async { self.cancelOverlay() }
+            }
+        }
+        if usesOutsideClickMonitor {
+            // オーバーレイ外のクリックで閉じる
+            mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                guard let self, let panel = self.overlayPanel else { return }
+                let screenPoint = NSEvent.mouseLocation
+                if !NSMouseInRect(screenPoint, panel.frame, false) {
+                    DispatchQueue.main.async { self.cancelOverlay() }
+                }
             }
         }
     }
@@ -216,16 +230,6 @@ final class QuickPickManager: ObservableObject {
         guard !entries.isEmpty else { return }
         let count = entries.count
         selectedIndex = ((selectedIndex + delta) % count + count) % count
-    }
-
-    private func modifierFlags(for modifiers: UInt32) -> NSEvent.ModifierFlags {
-        let value = Modifiers(rawValue: modifiers)
-        var flags: NSEvent.ModifierFlags = []
-        if value.contains(.command) { flags.insert(.command) }
-        if value.contains(.shift) { flags.insert(.shift) }
-        if value.contains(.option) { flags.insert(.option) }
-        if value.contains(.control) { flags.insert(.control) }
-        return flags
     }
 
     func selectAndPaste(at index: Int) {

@@ -23,8 +23,10 @@ struct PetacoApp: App {
             store: store,
             historyStore: historyStore,
             shortcutStore: quickPickShortcutStore,
-            startsMonitoring: false,
-            startsSessionMonitoring: false
+            startsMonitoring: true,
+            startsSessionMonitoring: true,
+            usesSessionCancelMonitor: false,
+            usesOutsideClickMonitor: true
         )
     }
 
