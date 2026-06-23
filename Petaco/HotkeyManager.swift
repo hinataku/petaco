@@ -1,87 +1,83 @@
 import Foundation
-import Carbon.HIToolbox
+import CoreGraphics
 import AppKit
 
-// 全定型文に対応するグローバルホットキーを登録し、押されたらペーストを実行する
+// 全定型文に対応するグローバルホットキーを CGEventTap で監視し、押されたらペーストを実行する。
+// Carbon の RegisterEventHotKey と異なり、XP-Pen 等のデバイスドライバ経由のキーも検出できる。
 final class HotkeyManager {
-    private var hotKeyRefs: [UInt32: EventHotKeyRef] = [:]
-    private var hotKeyIDToSnippetID: [UInt32: UUID] = [:]
-    private var nextHotKeyID: UInt32 = 1
-    private var eventHandler: EventHandlerRef?
+    private var eventTap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
     private let store: SnippetStore
-    private let historyStore: PasteHistoryStore
+    private var isSuspended = false
 
     init(store: SnippetStore, historyStore: PasteHistoryStore) {
         self.store = store
-        self.historyStore = historyStore
-        installEventHandler()
+        installEventTap()
     }
 
-    // Carbonのイベントハンドラを1つ設置し、押されたホットキーIDから該当する定型文を特定する
-    private func installEventHandler() {
-        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
-                                       eventKind: UInt32(kEventHotKeyPressed))
+    private func installEventTap() {
+        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        eventTap = CGEvent.tapCreate(
+            tap: .cghidEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: { (_, _, event, userData) -> Unmanaged<CGEvent>? in
+                guard let userData else { return Unmanaged.passRetained(event) }
+                return Unmanaged<HotkeyManager>.fromOpaque(userData)
+                    .takeUnretainedValue()
+                    .handleEvent(event)
+            },
+            userInfo: Unmanaged.passUnretained(self).toOpaque()
+        )
 
-        InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
-            guard let userData = userData else { return noErr }
-            let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-
-            var hotKeyID = EventHotKeyID()
-            GetEventParameter(eventRef, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
-                               nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
-
-            manager.handleHotKeyPressed(id: hotKeyID.id)
-            return noErr
-        }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &eventHandler)
-    }
-
-    private func handleHotKeyPressed(id: UInt32) {
-        guard let snippetID = hotKeyIDToSnippetID[id],
-              let snippet = store.snippets.first(where: { $0.id == snippetID }) else {
-            PetacoLog.hotkey.error("Received an unregistered hotkey id=\(id, privacy: .public)")
+        guard let eventTap else {
+            PetacoLog.hotkey.error("CGEventTap の作成に失敗しました。アクセシビリティ権限を確認してください。")
             return
         }
-        PetacoLog.hotkey.notice("Received hotkey id=\(id, privacy: .public), textLength=\(snippet.content.count, privacy: .public)")
-        // コピー履歴はClipboardMonitorが管理するため、貼り付け時には追加しない。
-        PasteManager.paste(text: snippet.content, restorePreviousApplication: false)
+
+        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+        PetacoLog.hotkey.notice("CGEventTap を登録しました")
     }
 
-    // 現在の store.snippets の内容に合わせて、全ホットキーを登録し直す
-    func reloadAllHotkeys() {
-        unregisterAllHotkeys()
+    private func handleEvent(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        guard !isSuspended else { return Unmanaged.passRetained(event) }
+
+        let keyCode = UInt32(event.getIntegerValueField(.keyboardEventKeycode))
+        let flags = event.flags
 
         for snippet in store.snippets {
-            register(snippet: snippet)
+            guard snippet.keyCode == keyCode,
+                  Modifiers(rawValue: snippet.modifiers).matches(flags) else { continue }
+
+            PetacoLog.hotkey.notice("ホットキー一致 keyCode=\(keyCode, privacy: .public)")
+            DispatchQueue.main.async {
+                PasteManager.paste(text: snippet.content, restorePreviousApplication: false)
+            }
+            return nil // イベントを消費して背後のアプリへ渡さない
         }
+
+        return Unmanaged.passRetained(event)
     }
 
-    // キー変更の入力待ち中など、既存ショートカットを一時的に停止する。
+    // 現在の snippets に合わせてホットキーを更新する（CGEventTap は常時起動しているため再登録不要）
+    func reloadAllHotkeys() {
+        isSuspended = false
+    }
+
+    // キー入力キャプチャ中はホットキーを無効化する
     func suspendAllHotkeys() {
-        unregisterAllHotkeys()
+        isSuspended = true
     }
 
-    private func unregisterAllHotkeys() {
-        for (_, ref) in hotKeyRefs {
-            UnregisterEventHotKey(ref)
+    deinit {
+        if let eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
         }
-        hotKeyRefs.removeAll()
-        hotKeyIDToSnippetID.removeAll()
-    }
-
-    private func register(snippet: Snippet) {
-        let hotKeyID = EventHotKeyID(signature: OSType(0x53504254), id: nextHotKeyID) // "SPBT"
-        var ref: EventHotKeyRef?
-
-        let modifiers = Modifiers(rawValue: snippet.modifiers).carbonHotKeyModifiers
-        let status = RegisterEventHotKey(snippet.keyCode, modifiers,
-                                          hotKeyID, GetApplicationEventTarget(), 0, &ref)
-        if status == noErr, let ref = ref {
-            hotKeyRefs[nextHotKeyID] = ref
-            hotKeyIDToSnippetID[nextHotKeyID] = snippet.id
-            PetacoLog.hotkey.notice("Registered hotkey id=\(self.nextHotKeyID, privacy: .public), keyCode=\(snippet.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public)")
-            nextHotKeyID += 1
-        } else {
-            PetacoLog.hotkey.error("Failed to register keyCode=\(snippet.keyCode, privacy: .public), modifiers=\(modifiers, privacy: .public), status=\(status, privacy: .public)")
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Carbon.HIToolbox
+import CoreGraphics
 
 // 1つの定型文を表すモデル
 struct Snippet: Identifiable, Codable, Equatable {
@@ -35,6 +36,14 @@ struct Modifiers: OptionSet, Codable {
     // キーコードと組み合わせたショートカット表示文字列 (例: "⌃ + ⌘ + F1")
     func shortcutLabel(keyCode: UInt32) -> String {
         (displaySymbols + [KeyCodeMap.char(for: keyCode)]).joined(separator: " + ")
+    }
+
+    // CGEventFlags と比較する。無関係なシステムフラグを除外して修飾キーのみ照合する。
+    func matches(_ flags: CGEventFlags) -> Bool {
+        contains(.command) == flags.contains(.maskCommand) &&
+        contains(.shift)   == flags.contains(.maskShift) &&
+        contains(.option)  == flags.contains(.maskAlternate) &&
+        contains(.control) == flags.contains(.maskControl)
     }
 
     // CarbonのグローバルホットキーAPIへ渡す修飾キーフラグへ変換する。

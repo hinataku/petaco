@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		29472377F5DA487598D4B2A0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5653131DCF94649918728C8 /* AppDelegate.swift */; };
 		AA11BB22CC33445566778899 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC334455667788AA /* ClipboardMonitor.swift */; };
-		BB22CC33DD445566778899AA /* PasteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD4455667788990B /* PasteButton.swift */; };
 		CC33DD44EE556677889900BB /* QuickPickShortcutEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE5566778899000C /* QuickPickShortcutEditView.swift */; };
 		F372F6BFFF604AAF8B649791 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E93E9FB21774F4892E8812D /* ContentView.swift */; };
 		C0F5BB90E53240C1B3DEB780 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82C280110EDA42BEA9212B55 /* HotkeyManager.swift */; };
@@ -19,7 +18,6 @@
 		9534219C06D147748CEFCFA5 /* PasteHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */; };
 		A811E099E48741E6965F22D7 /* PasteHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */; };
 		1D17F90B7D924C1894B0F5A5 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B812ED0725F54C28A808DDC9 /* PasteManager.swift */; };
-		84CA103FD19C425588857974 /* PastePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0505812F693E456DA7DA0042 /* PastePreviewView.swift */; };
 		7A14C7BCC1364362BB4F2FD1 /* PetacoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B346699B9441D1A02892F3 /* PetacoApp.swift */; };
 		495C14A8B46A40639B63814D /* QuickPickManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 891745C2101548BD8E62899B /* QuickPickManager.swift */; };
 		A1B2C3D4E5F60718293A4B5C /* QuickPickShortcutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */; };
@@ -34,7 +32,6 @@
 /* Begin PBXFileReference section */
 		E5653131DCF94649918728C8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA11BB22CC334455667788AA /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
-		BB22CC33DD4455667788990B /* PasteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteButton.swift; sourceTree = "<group>"; };
 		CC33DD44EE5566778899000C /* QuickPickShortcutEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickShortcutEditView.swift; sourceTree = "<group>"; };
 		0E93E9FB21774F4892E8812D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		82C280110EDA42BEA9212B55 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
@@ -44,7 +41,6 @@
 		6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHistoryItem.swift; sourceTree = "<group>"; };
 		125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteHistoryStore.swift; sourceTree = "<group>"; };
 		B812ED0725F54C28A808DDC9 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
-		0505812F693E456DA7DA0042 /* PastePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastePreviewView.swift; sourceTree = "<group>"; };
 		23B346699B9441D1A02892F3 /* PetacoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetacoApp.swift; sourceTree = "<group>"; };
 		891745C2101548BD8E62899B /* QuickPickManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickManager.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPickShortcutStore.swift; sourceTree = "<group>"; };
@@ -92,9 +88,7 @@
 				F355488C83854E9D92BFED7A /* LaunchAtLoginManager.swift */,
 				6CAA6FE4A366422BB49CF183 /* PasteHistoryItem.swift */,
 				125CFD2BC36C4D81AEE15B19 /* PasteHistoryStore.swift */,
-				BB22CC33DD4455667788990B /* PasteButton.swift */,
 				B812ED0725F54C28A808DDC9 /* PasteManager.swift */,
-				0505812F693E456DA7DA0042 /* PastePreviewView.swift */,
 				23B346699B9441D1A02892F3 /* PetacoApp.swift */,
 				891745C2101548BD8E62899B /* QuickPickManager.swift */,
 				A1B2C3D4E5F60718293A4B5D /* QuickPickShortcutStore.swift */,
@@ -196,9 +190,7 @@
 				B73E18AA325048FFACCA28C5 /* LaunchAtLoginManager.swift in Sources */,
 				9534219C06D147748CEFCFA5 /* PasteHistoryItem.swift in Sources */,
 				A811E099E48741E6965F22D7 /* PasteHistoryStore.swift in Sources */,
-				BB22CC33DD445566778899AA /* PasteButton.swift in Sources */,
 				1D17F90B7D924C1894B0F5A5 /* PasteManager.swift in Sources */,
-				84CA103FD19C425588857974 /* PastePreviewView.swift in Sources */,
 				7A14C7BCC1364362BB4F2FD1 /* PetacoApp.swift in Sources */,
 				495C14A8B46A40639B63814D /* QuickPickManager.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* QuickPickShortcutStore.swift in Sources */,
